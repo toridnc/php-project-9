@@ -1,0 +1,30 @@
+{
+    "name": "hexlet/code",
+    "description": "Page analyzer",
+    "homepage": "https://github.com/toridnc/php-project-9",
+    "readme": "https://github.com/toridnc/php-project-9#readme",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Hexlet\\Code\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "toridnc",
+            "email": "riadev@inbox.ru"
+        }
+    ],
+    "require": {
+        "slim/slim": "^4.11",
+        "slim/psr7": "^1.6",
+        "slim/http": "^1.3",
+        "slim/php-view": "^3.2",
+        "php-di/php-di": "^6.4",
+        "slim/flash": "^0.4.0"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "*"
+    }
+}
