@@ -1,15 +1,23 @@
-name: project-check
+name: Linter
 
 on: push
 
 jobs:
   build:
-    runs-on: Ubuntu 20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
+        # https://github.com/shivammathur/setup-php
+      - name: Setup PHP
+        run: shivammathur/setup-php@v2
+        with:
+        php-version: '7.4'
+
+      # Install project
       - name: Install
         run: make install
 
+      # Run linter
       - name: Linter
         run: make lint
