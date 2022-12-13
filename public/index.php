@@ -20,7 +20,8 @@ $app = AppFactory::create();
 $app->addErrorMiddleware(true, true, true);
 
 $app->get(
-    '/', function ($request, $response) {
+    '/',
+    function ($request, $response) {
         return $response->write('Page analyzer');
     }
 );

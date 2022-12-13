@@ -1,7 +1,7 @@
 # Page analyzer
 
 ### Hexlet tests and linter status:
-[![Actions Status](https://github.com/toridnc/php-project-9/workflows/hexlet-check/badge.svg)](https://github.com/toridnc/php-project-9/actions) [![Linter](https://github.com/toridnc/php-project-lvl2/actions/workflows/run-linter.yml/badge.svg)](https://github.com/toridnc/php-project-lvl2/actions)
+[![Actions Status](https://github.com/toridnc/php-project-9/workflows/hexlet-check/badge.svg)](https://github.com/toridnc/php-project-9/actions) [![Linter](https://github.com/toridnc/php-project-9/actions/workflows/project-check.yml/badge.svg)](https://github.com/toridnc/php-project-9/actions)
 
 ### **Link to the project domain [Page analyzer](php-project-9-production-8806.up.railway.app "See how it looks")**
 
