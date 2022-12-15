@@ -5,8 +5,8 @@
  *
  * PHP version 7.4
  *
- * @category Xxx
- * @package  Xxx
+ * @category Project
+ * @package  Page_Analyzer
  * @author   toridnc <riadev@inbox.ru>
  * @license  MIT https://mit-license.org/
  * @link     https://github.com/toridnc/php-project-lvl3
@@ -15,15 +15,32 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Slim\Factory\AppFactory;
+use Slim\Middleware\MethodOverrideMiddleware;
+use DI\Container;
 
-$app = AppFactory::create();
-$app->addErrorMiddleware(true, true, true);
+session_start();
 
-$app->get(
-    '/',
-    function ($request, $response) {
-        return $response->write('Page analyzer');
+$container = new Container();
+$container->set(
+    'renderer', function () {
+        return new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
     }
 );
+$container->set(
+    'flash', function () {
+        return new \Slim\Flash\Messages();
+    }
+);
+
+$app = AppFactory::createFromContainer($container);
+$app->addErrorMiddleware(true, true, true);
+$app->add(MethodOverrideMiddleware::class);
+
+// HOMEPAGE
+$app->get(
+    '/', function ($request, $response) {
+        return $this->get('renderer')->render($response, 'index.phtml');
+    }
+)->setName('homepage');
 
 $app->run();
