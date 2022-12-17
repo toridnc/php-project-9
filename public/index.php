@@ -43,4 +43,18 @@ $app->get(
     }
 )->setName('homepage');
 
+// ALL URLS
+$app->get(
+    '/urls', function ($request, $response) {
+        return $this->get('renderer')->render($response, 'urls.phtml');
+    }
+)->setName('urls');
+
+// SHOW INFORM ABOUT ONE URL
+$app->get(
+    '/urls/{id}', function ($request, $response) {
+        return $this->get('renderer')->render($response, 'show.phtml');
+    }
+)->setName('url');
+
 $app->run();
