@@ -22,10 +22,10 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link <?= ($itemMenu === 'main') ? 'active' : '';?>" href="/">Главная</a>
+                        <a class="nav-link <?= (isset($itemMenu) && $itemMenu === 'main') ? 'active' : '';?>" href="/">Главная</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= ($itemMenu === 'urls') ? 'active' : '';?>" href="/urls">Сайты</a>
+                        <a class="nav-link <?= (isset($itemMenu) && $itemMenu === 'urls') ? 'active' : '';?>" href="/urls">Сайты</a>
                     </li>
                 </ul>
             </div>

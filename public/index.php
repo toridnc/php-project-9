@@ -17,13 +17,14 @@ require __DIR__ . '/../vendor/autoload.php';
 use Slim\Factory\AppFactory;
 use Slim\Middleware\MethodOverrideMiddleware;
 use DI\Container;
+use Carbon\Carbon;
 
 session_start();
 
-// Connect to postgreSQL database
+// Connect to PostgreSQL database
 use PostgreSQLConnect\Connection as Connection;
 try {
-    Connection::get()->connect();
+    $database = Connection::get()->connect();
     echo 'A connection to the PostgreSQL database sever has been established successfully.';
 } catch (\PDOException $e) {
     echo $e->getMessage();
@@ -50,51 +51,57 @@ $app = AppFactory::createFromContainer($container);
 $app->addErrorMiddleware(true, true, true);
 $app->add(MethodOverrideMiddleware::class);
 
+$router = $app->getRouteCollector()->getRouteParser();
+
 // HOMEPAGE and FORM FOR ADD URL
 $app->get(
     '/',
     function ($request, $response) {
         $itemMenu = 'main';
+
         $params = [
             'itemMenu' => $itemMenu,
-            'url' => $url,
-            'errors' => $errors
+            'name' => ''
         ];
         return $this->get('renderer')->render($response, 'index.phtml', $params);
     }
 )->setName('homepage');
 
-$app->get(
-    '/phpinfo',
-    function ($request, $response) {
-        $itemMenu = 'main';
-        $params = [
-            'itemMenu' => $itemMenu,
-            'url' => $url,
-            'errors' => $errors
-        ];
-        return $this->get('renderer')->render($response, 'phpinfo.phtml', $params);
-    }
-)->setName('phpinfo');
-
 // Add NEW URL
 $app->post(
     '/urls',
-    function ($request, $response) {
+    function ($request, $response) use ($database, $router) {
+        // Extract url from the form
         $url = $request->getParsedBodyParam('url');
-        if (count($errors) === 0) {
-            // If the data is correct, save, add a flush and redirect.
-            $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
-            return $response->withRedirect($router->urlFor('url'), 302);
-        }
-        $params = [
-            'url' => $url,
-            'errors' => $errors
-        ];
+        $name = $url['name'];
+
+        // Validation
+        $v = new Valitron\Validator($url);
+        $v->rule('required', 'name') // Field is not empty
+        ->rule('url', 'name') // Correct url address
+        ->rule('lengthMax', 'name', 255); // Length not more than 255 characters
         // If there are errors, we set the response code to 422 and render the form with errors.
-        return $this->get('renderer')->render($response->withStatus(422), 'users/index.phtml', $params);
+        if (!$v->validate()) {
+            $errors = $v->errors();
+            $params = [
+                'errors' => $errors
+            ];
+            return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
+        }
+
+        // Add "Страница уже существует" ??????
+
+        // Add url in database table 'urls'
+        $timestamp = Carbon::now();
+        $queryInsert = $database->prepare('INSERT INTO urls (name, created_at) VALUES (:name, :timestamp)');
+        $queryInsert->execute(array(':name' => $name, ':timestamp' => $timestamp));
+        // If the data is correct, save, add a flush and redirect
+        $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
+
+        return $this->get('renderer')->render($response, 'show.phtml');
+        return $response->withRedirect($router->urlFor('url'), 302);
     }
-)->setName('addUrl');
+)->setName('postNewUrl');
 
 // ALL URLS
 $app->get(
@@ -102,8 +109,7 @@ $app->get(
     function ($request, $response) {
         $itemMenu = 'urls';
         $params = [
-            'itemMenu' => $itemMenu,
-            'errors' => $errors
+            'itemMenu' => $itemMenu
         ];
         return $this->get('renderer')->render($response, 'urls.phtml', $params);
     }
@@ -112,8 +118,18 @@ $app->get(
 // SHOW INFORM ABOUT ONE URL
 $app->get(
     '/urls/{id}',
-    function ($request, $response, $args) {
-        return $this->get('renderer')->render($response, 'show.phtml');
+    function ($request, $response, $args) use ($database) {
+        $id = $args['id'];
+        $messages = $this->get('flash')->getMessages();
+
+        $querySelect = $database->prepare('SELECT * FROM urls WHERE id=:id')->execute(array(':id' => $id));
+        $aboutUrl = $querySelect->fetch();
+
+        $params = [
+            'url' => $aboutUrl,
+            'flash' => $messages
+        ];
+        return $this->get('renderer')->render($response, 'show.phtml', $params);
     }
 )->setName('url');
 

@@ -9,12 +9,15 @@
                 <h1 class="display-3">Анализатор страниц</h1>
                 <p class="lead">Бесплатно проверяйте сайты на SEO пригодность</p>
                 <!-- Site entry form for validation (public/index.php) -->
-                <form action="/urls" method="post" class="row">
+                <form action="/urls" method="post" required="" class="row">
                     <div class="col-8">
-                        <input type="text" name="url[name]" value="" class="form-control form-control-lg" data-ddg-inputtype="unknown" data-twofas-input-listener="true" placeholder="https://www.example.com">
+                        <input type="text" name="url[name]" value="" class="form-control form-control-lg is-invalid" data-ddg-inputtype="unknown" data-twofas-input-listener="true" placeholder="https://www.example.com">
+                        <?php if (isset($errors)):?>
+                            <div class="invalid-feedback">Некорректный URL</div>
+                        <?php endif;?>
                     </div>
                     <div class="col-2">
-                        <input type="submit" class="btn btn-lg btn-primary ms-3 px-5 text-uppercase mx-3" value="Проверить">
+                        <button class="btn btn-lg btn-primary ms-3 px-5 text-uppercase mx-3">Проверить</button>
                     </div>
                 </form>
             </div>
