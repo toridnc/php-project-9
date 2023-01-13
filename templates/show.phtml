@@ -2,6 +2,12 @@
 
 <?php require 'components/header.phtml'; ?>
 
+<!--Displays a message that the URL was added successfully-->
+<?php foreach ($messages as $message): ?>
+    <div class="alert alert-success" role="alert">
+        <?= $message ?>
+    </div>
+<?php endforeach; ?>
 
 <main class="flex-grow-1">
     <div class="container-lg mt-3">

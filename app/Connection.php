@@ -39,6 +39,7 @@ class Connection
      * @return \PDO
      * @throws \Exception
      */
+
     public function connect()
     {
         // Read settings in the ini configuration file
@@ -56,6 +57,7 @@ class Connection
         $conStr = "pgsql:host=$host;port=$port;dbname=$dbname";
         $opt = array(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         $pdo = new \PDO($conStr, $user, $password, $opt);
+
         return $pdo;
     }
         /**

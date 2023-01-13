@@ -11,8 +11,12 @@
                 <!-- Site entry form for validation (public/index.php) -->
                 <form action="/urls" method="post" required="" class="row">
                     <div class="col-8">
-                        <input type="text" name="url[name]" value="" class="form-control form-control-lg is-invalid" data-ddg-inputtype="unknown" data-twofas-input-listener="true" placeholder="https://www.example.com">
-                        <?php if (isset($errors)):?>
+                        <input type="text" name="url[name]" value="" class="form-control form-control-lg <?= (isset($errors)) ? 'is-invalid' : '';?>" data-ddg-inputtype="unknown" data-twofas-input-listener="true" placeholder="https://www.example.com">
+                        <!-- Убрать логику в php !!!! -->
+                        <?php if (isset($errors) && $errors === 'empty'):?>
+                            <div class="invalid-feedback">URL не должен быть пустым</div>
+                        <?php endif;?>
+                        <?php if (isset($errors) && $errors === 'uncorrect' || $errors === 'more255'):?>
                             <div class="invalid-feedback">Некорректный URL</div>
                         <?php endif;?>
                     </div>
