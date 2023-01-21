@@ -43,7 +43,7 @@ class Connection
     public function connect()
     {
         // Read settings in the ini configuration file
-        $params = parse_ini_file(__DIR__ . '/../vendor/database.ini');
+        $params = parse_ini_file(__DIR__ . '/../database.ini');
         if ($params === false) {
             throw new \Exception("Error reading database configuration file");
         }

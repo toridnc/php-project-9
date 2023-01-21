@@ -14,12 +14,14 @@
                         <th>Последняя проверка</th>
                         <th>Код ответа</th>
                     </tr>
+                    <?php foreach ($urls as $url) : ?>
                     <tr>
                         <td><?= $url['id'] ?></td>
                         <td><a href="/urls/<?= $url['id'] ?>"><?= $url['name'] ?></a></td>
                         <td><?= $url['last_checks'] ?></td>
                         <td><?= $url['status_code'] ?></td>
                     </tr>
+                    <?php endforeach ?>
                 </tbody>
             </table>
         </div>

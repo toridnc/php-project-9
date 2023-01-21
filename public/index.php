@@ -18,6 +18,7 @@ use Slim\Factory\AppFactory;
 use Slim\Middleware\MethodOverrideMiddleware;
 use DI\Container;
 use Carbon\Carbon;
+use Slim\Flash\Messages;
 
 session_start();
 
@@ -25,7 +26,7 @@ session_start();
 use PostgreSQLConnect\Connection as Connection;
 try {
     $database = Connection::get()->connect();
-    echo 'A connection to the PostgreSQL database sever has been established successfully.';
+    // echo 'A connection to the PostgreSQL database sever has been established successfully.';
 } catch (\PDOException $e) {
     echo 'Connection error: ' . $e->getMessage();
 }
@@ -50,16 +51,17 @@ $container->set(
 $app = AppFactory::createFromContainer($container);
 $app->addErrorMiddleware(true, true, true);
 $app->add(MethodOverrideMiddleware::class);
-
-$router = $app->getRouteCollector()->getRouteParser();
+$router = $app->getRouteCollector()->getRouteParser(); // Named routes
 
 // HOMEPAGE and FORM FOR ADD URL
 $app->get(
     '/',
     function ($request, $response) {
         $itemMenu = 'main';
+        $messages = $this->get('flash')->getMessages();
         $params = [
             'itemMenu' => $itemMenu,
+            'flash' => $messages,
             'url' => ''
         ];
         return $this->get('renderer')->render($response, 'index.phtml', $params);
@@ -74,82 +76,74 @@ $app->post(
         $url = $request->getParsedBodyParam('url');
         $name = $url['name']; // 'name' for table 'urls' in database
         $timestamp = Carbon::now(); // 'created_at' for table 'urls' in database
-        //print_r($timestamp);
 
-        // Уменьшить кол-во строк валидации !!!!
         // Validation
-        // If there are errors, we set the response code to 422 and render the form with errors.
+        // If there are errors, set the response code to 422 and render the form with errors.
         $v = new Valitron\Validator($url);
         $v->rule('required', 'name'); // Field is not empty
         if (!$v->validate()) {
             $errors = $v->errors();
+            $message = 'URL не должен быть пустым';
             $params = [
-                'errors' => 'empty'
+                'errors' => $errors,
+                'message' => $message
             ];
             return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
         }
         $v->rule('url', 'name'); // Correct URL address
-        if (!$v->validate()) {
-            $errors = $v->errors();
-            $params = [
-                'errors' => 'uncorrect'
-            ];
-            return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
-        }
         $v->rule('lengthMax', 'name', 255); // Length not more than 255 characters
         if (!$v->validate()) {
             $errors = $v->errors();
+            $message = 'Некорректный URL';
             $params = [
-                'errors' => 'more255'
+                'errors' => $errors,
+                'message' => $message
             ];
             return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
         }
 
-        // Add "Страница уже существует" ??????
-        // $this->get('flash')->addMessage('error', 'Страница уже существует');
-        // return $response->withRedirect($router->urlFor('url'), 422);
-
-        //  Add URL in database table 'urls'
-
-        // If the data is correct, save, add a flush and redirect
-        // $sql = $database->prepare("INSERT INTO urls (name, created_at) VALUES (:name, :timestamp)", PDO::ERRMODE_EXCEPTION);
-        // $sql->execute(["name" => $name, "timestamp" => $timestamp]);
-        // if ($sql->execute()) {
-        //     echo "New record created successfully";
-        // } else {
-        //     echo "Unable to create record";
-        // }
-
-        // $sql = $database->prepare("INSERT INTO urls (name, created_at) VALUES (?, ?)", PDO::ERRMODE_EXCEPTION);
-        // $sql->execute([$name, $timestamp]);
-        // if ($sql->execute()) {
-        //     echo "New record created successfully";
-        // } else {
-        //     echo "Unable to create record";
-        // }
-
-        $sql = $database->prepare("INSERT INTO urls (name, created_at) VALUES (:name, :timestamp)", ["key" => PDO::ERRMODE_EXCEPTION]);
-        $sql->bindParam(':name', $name);
-        $sql->bindParam(':timestamp', $timestamp);
-        $sql->execute();
-
-        if (!$sql) {
-            echo "Prepare failed: (". $database->error.") ".$database->error."<br>";
+        // Check that the URL is already added
+        $exists = $database->prepare('SELECT id FROM urls WHERE name=?');
+        $exists->execute([$name]);
+        $count = $exists->rowCount();
+        // If the URL is already exists, set the response code to 422 and render the form with errors
+        if ($count > 0) {
+            $id = $exists->fetchColumn();
+            $this->get('flash')->addMessage('warning', 'Страница уже существует');
+            return $response->withRedirect($router->urlFor('url', ['id' => $id]), 302);
         }
 
+        //  Add URL in database table 'urls'
+        $addUrl = $database->prepare('INSERT INTO urls (name, created_at) VALUES (?, ?)');
+        $addUrl->execute([$name, $timestamp]);
+        $getId = $database->prepare('SELECT id FROM urls WHERE name=?');
+        $getId->execute([$name]);
+        $id = $getId->fetchColumn();
+        // If the data is correct, save, add a flush and redirect
         $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
-        return $this->get('renderer')->render($response, 'show.phtml');
-        return $response->withRedirect($router->urlFor('url'), 302);
+        return $response->withRedirect($router->urlFor('url', ['id' => $id]), 302);
     }
 )->setName('postNewUrl');
 
 // ALL URLS
 $app->get(
     '/urls',
-    function ($request, $response) {
+    function ($request, $response) use ($database) {
         $itemMenu = 'urls';
+        $getUrls = $database->prepare("SELECT id, name FROM urls ORDER BY created_at DESC");
+        $getUrls->execute();
+        $allUrls = $getUrls->fetchAll();
+
+        $urls = [];
+        foreach ($allUrls as $url) {
+            $id = $url['id'];
+            $name = $url['name'];
+            $urls[] = compact('id', 'name');
+        }
+
         $params = [
-            'itemMenu' => $itemMenu
+            'itemMenu' => $itemMenu,
+            'urls' => $urls
         ];
         return $this->get('renderer')->render($response, 'urls.phtml', $params);
     }
@@ -162,14 +156,15 @@ $app->get(
         $id = $args['id'];
         // Add a message that the URL was added successfully.
         $messages = $this->get('flash')->getMessages();
+        //$message = 'Страница успешно добавлена';
 
-        $querySelect = $database->prepare('SELECT * FROM urls WHERE id=:id')->execute(array(':id' => $id));
+        $querySelect = $database->prepare('SELECT * FROM urls WHERE id=?');
+        $querySelect->execute([$id]);
         $aboutUrl = $querySelect->fetch();
-        //$aboutUrl = ['name' => 'lala', 'id' => $id, 'created_at' => '12.12.12'];
 
         $params = [
             'url' => $aboutUrl,
-            'messages' => $messages
+            'flash' => $messages
         ];
         return $this->get('renderer')->render($response, 'show.phtml', $params);
     }
