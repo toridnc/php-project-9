@@ -116,10 +116,10 @@ $app->post(
         //  Add URL in database table 'urls'
         $addUrl = $database->prepare('INSERT INTO urls (name, created_at) VALUES (?, ?)');
         $addUrl->execute([$name, $timestamp]);
+        // Get 'id' and redirect with flash message
         $getId = $database->prepare('SELECT id FROM urls WHERE name=?');
         $getId->execute([$name]);
         $id = $getId->fetchColumn();
-        // If the data is correct, save, add a flush and redirect
         $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
         return $response->withRedirect($router->urlFor('url', ['id' => $id]), 302);
     }
@@ -130,7 +130,8 @@ $app->get(
     '/urls',
     function ($request, $response) use ($database) {
         $itemMenu = 'urls';
-        $getUrls = $database->prepare("SELECT id, name FROM urls ORDER BY created_at DESC");
+        // Extract URLs data
+        $getUrls = $database->prepare('SELECT id, name FROM urls ORDER BY created_at DESC');
         $getUrls->execute();
         $allUrls = $getUrls->fetchAll();
 
@@ -138,7 +139,13 @@ $app->get(
         foreach ($allUrls as $url) {
             $id = $url['id'];
             $name = $url['name'];
-            $urls[] = compact('id', 'name');
+            // Extract URLs data from 'url_checks' table
+            $getUrlCheck = $database->prepare('SELECT created_at FROM url_checks WHERE url_id=?
+                ORDER BY created_at DESC LIMIT 1');
+            $getUrlCheck->execute([$id]);
+            $checks = $getUrlCheck->fetch();
+            $last_checks = $checks['created_at'];
+            $urls[] = compact('id', 'name', 'last_checks');
         }
 
         $params = [
@@ -154,20 +161,45 @@ $app->get(
     '/urls/{id}',
     function ($request, $response, $args) use ($database) {
         $id = $args['id'];
-        // Add a message that the URL was added successfully.
+        // Add a message that the URL was added successfully
         $messages = $this->get('flash')->getMessages();
-        //$message = 'Страница успешно добавлена';
 
-        $querySelect = $database->prepare('SELECT * FROM urls WHERE id=?');
-        $querySelect->execute([$id]);
-        $aboutUrl = $querySelect->fetch();
+        // Extract URL data from 'urls' table
+        $selectDataUrl = $database->prepare('SELECT * FROM urls WHERE id=?');
+        $selectDataUrl->execute([$id]);
+        $dataUrl = $selectDataUrl->fetch();
+
+        // Extract URL data from 'url_checks' table
+        $selectCheckUrl = $database->prepare('SELECT id, created_at FROM url_checks WHERE url_id=?');
+        $selectCheckUrl->execute([$id]);
+        $checkUrl = $selectCheckUrl->fetchAll();
 
         $params = [
-            'url' => $aboutUrl,
-            'flash' => $messages
+            'flash' => $messages,
+            'url' => $dataUrl,
+            'checks' => $checkUrl
         ];
         return $this->get('renderer')->render($response, 'show.phtml', $params);
     }
 )->setName('url');
+
+// CHECK URL
+$app->post(
+    '/urls/{url_id}/checks',
+    function ($request, $response, $args) use ($database, $router) {
+        $url_id = $args['url_id'];
+        $timestamp = Carbon::now(); // 'created_at' for table 'url_checks' in database
+
+        $addUrlCheck = $database->prepare('INSERT INTO url_checks (url_id, created_at) VALUES (?, ?)');
+        $addUrlCheck->execute([$url_id, $timestamp]);
+
+        // Get 'id' and redirect with flash message
+        $getUrl = $database->prepare('SELECT name FROM urls WHERE id=?');
+        $getUrl->execute([$url_id]);
+        $url = $getUrl->fetchColumn();
+        $this->get('flash')->addMessage('success', 'Страница успешно проверена');
+        return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
+    }
+)->setName('check');
 
 $app->run();
