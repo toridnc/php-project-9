@@ -19,6 +19,8 @@ use Slim\Middleware\MethodOverrideMiddleware;
 use DI\Container;
 use Carbon\Carbon;
 use Slim\Flash\Messages;
+use GuzzleHttp\Client;
+use Guzzle\Http\Exception\ClientErrorResponseException;
 
 session_start();
 
@@ -26,7 +28,7 @@ session_start();
 use PostgreSQLConnect\Connection as Connection;
 try {
     $database = Connection::get()->connect();
-    // echo 'A connection to the PostgreSQL database sever has been established successfully.';
+    // echo 'A connection to the PostgreSQL database sever has been established successfully';
 } catch (\PDOException $e) {
     echo 'Connection error: ' . $e->getMessage();
 }
@@ -48,10 +50,11 @@ $container->set(
     }
 );
 
+// Route
 $app = AppFactory::createFromContainer($container);
 $app->addErrorMiddleware(true, true, true);
 $app->add(MethodOverrideMiddleware::class);
-$router = $app->getRouteCollector()->getRouteParser(); // Named routes
+$router = $app->getRouteCollector()->getRouteParser();
 
 // HOMEPAGE and FORM FOR ADD URL
 $app->get(
@@ -109,11 +112,11 @@ $app->post(
         // If the URL is already exists, set the response code to 422 and render the form with errors
         if ($count > 0) {
             $id = $exists->fetchColumn();
-            $this->get('flash')->addMessage('warning', 'Страница уже существует');
+            $this->get('flash')->addMessage('success', 'Страница уже существует');
             return $response->withRedirect($router->urlFor('url', ['id' => $id]), 302);
         }
 
-        //  Add URL in database table 'urls'
+        // Add URL in database table 'urls'
         $addUrl = $database->prepare('INSERT INTO urls (name, created_at) VALUES (?, ?)');
         $addUrl->execute([$name, $timestamp]);
         // Get 'id' and redirect with flash message
@@ -140,12 +143,13 @@ $app->get(
             $id = $url['id'];
             $name = $url['name'];
             // Extract URLs data from 'url_checks' table
-            $getUrlCheck = $database->prepare('SELECT created_at FROM url_checks WHERE url_id=?
+            $getUrlCheck = $database->prepare('SELECT created_at, status_code FROM url_checks WHERE url_id=?
                 ORDER BY created_at DESC LIMIT 1');
             $getUrlCheck->execute([$id]);
             $checks = $getUrlCheck->fetch();
+            $status_code = $checks['status_code'];
             $last_checks = $checks['created_at'];
-            $urls[] = compact('id', 'name', 'last_checks');
+            $urls[] = compact('id', 'status_code', 'name', 'last_checks');
         }
 
         $params = [
@@ -161,6 +165,7 @@ $app->get(
     '/urls/{id}',
     function ($request, $response, $args) use ($database) {
         $id = $args['id'];
+
         // Add a message that the URL was added successfully
         $messages = $this->get('flash')->getMessages();
 
@@ -169,8 +174,13 @@ $app->get(
         $selectDataUrl->execute([$id]);
         $dataUrl = $selectDataUrl->fetch();
 
+        // 404 error if id does not exist
+        if (!in_array($id, $dataUrl)) {
+            return $this->get('renderer')->render($response, 'components/404.phtml');
+        }
+
         // Extract URL data from 'url_checks' table
-        $selectCheckUrl = $database->prepare('SELECT id, created_at FROM url_checks WHERE url_id=?');
+        $selectCheckUrl = $database->prepare('SELECT id, created_at, status_code FROM url_checks WHERE url_id=?');
         $selectCheckUrl->execute([$id]);
         $checkUrl = $selectCheckUrl->fetchAll();
 
@@ -190,14 +200,42 @@ $app->post(
         $url_id = $args['url_id'];
         $timestamp = Carbon::now(); // 'created_at' for table 'url_checks' in database
 
-        $addUrlCheck = $database->prepare('INSERT INTO url_checks (url_id, created_at) VALUES (?, ?)');
-        $addUrlCheck->execute([$url_id, $timestamp]);
+        // Get URL from table 'urls'
+        $getUrl = $database->prepare('SELECT name FROM urls WHERE id=?');
+        $getUrl->execute([$url_id]);
+        $url = $getUrl->fetchColumn();
+
+        // Throw exception for status code
+        $client = new Client;
+        try {
+            $res = $client->request('GET', (string) $url);
+        }
+        // Exception when a client error is encountered (4xx codes)
+        catch (GuzzleHttp\Exception\ClientException $e) {
+            $res = $e->getResponse();
+            $responseBodyAsString = $res->getBody()->getContents();
+        }
+        // Exception when a server error is encountered (5xx codes)
+        catch (GuzzleHttp\Exception\ServerException $e) {
+            $res = $e->getResponse();
+            return $this->get('renderer')->render($res, 'components/500.phtml');
+        }
+
+        // Get status code
+        $status_code = $res->getStatusCode();
+        // Add checks data in database table 'url_checks'
+        $addUrlCheck = $database->prepare('INSERT INTO url_checks (url_id, created_at, status_code) VALUES (?, ?, ?)');
+        $addUrlCheck->execute([$url_id, $timestamp, $status_code]);
 
         // Get 'id' and redirect with flash message
         $getUrl = $database->prepare('SELECT name FROM urls WHERE id=?');
         $getUrl->execute([$url_id]);
         $url = $getUrl->fetchColumn();
-        $this->get('flash')->addMessage('success', 'Страница успешно проверена');
+        if ($status_code === 200) {
+            $this->get('flash')->addMessage('success', 'Страница успешно проверена');
+        } else {
+            $this->get('flash')->addMessage('warning', 'Проверка была выполнена успешно, но сервер ответил c ошибкой');
+        }
         return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
     }
 )->setName('check');

@@ -5,13 +5,10 @@
 
 <br>
 
-## **Link to the project [Page analyzer](php-project-9-production-8806.up.railway.app "See how it looks")**
-
-<br>
-
 ## System requirements
 * PHP 7.4
 * Composer
+* PostgreSQL
 
 <br>
 

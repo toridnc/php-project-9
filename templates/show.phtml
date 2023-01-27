@@ -2,11 +2,11 @@
 
 <?php require 'components/header.phtml'; ?>
 
-<!--?php Displays a message that the URL was added successfully ?-->
+<!--?php Displays a message that the URL was added or checked successfully ?-->
 <?php if (count($flash) > 0) : ?>
     <?php foreach ($flash as $messages) : ?>
         <?php foreach ($messages as $message) : ?>
-            <div class="alert alert-success" role="alert"> <?= $message ?> </div>
+            <div class="alert alert-<?= $flash['success'] ? 'success' : 'warning' ?> " role="alert"> <?= $message ?> </div>
         <?php endforeach ?>
     <?php endforeach ?>
 <?php endif ?>
