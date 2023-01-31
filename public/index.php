@@ -22,17 +22,25 @@ use Slim\Flash\Messages;
 use GuzzleHttp\Client;
 use Guzzle\Http\Exception\ClientErrorResponseException;
 use DiDom\Document;
+use DiDom\Element;
 
 session_start();
 
 // Connect to PostgreSQL database
-use PostgreSQLConnect\Connection as Connection;
-try {
-    $database = Connection::get()->connect();
-    // echo 'A connection to the PostgreSQL database sever has been established successfully';
-} catch (\PDOException $e) {
-    echo 'Connection error: ' . $e->getMessage();
+$databaseUrl = parse_url($_ENV['DATABASE_URL']); // Read settings file
+if ($databaseUrl === false) {
+    throw new \Exception("Error reading database data");
 }
+// Connection to the PostgreSQL database
+$host = $databaseUrl['host'];
+$port = $databaseUrl['port'];
+$dbname = ltrim($databaseUrl['path'], '/');
+$username = $databaseUrl['user'];
+$password = $databaseUrl['pass'];
+
+$conStr = "pgsql:host=$host;port=$port;dbname=$dbname";
+$opt = array(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+$database = new \PDO($conStr, $username, $password, $opt);
 
 // Connect to PHPRenderer templates
 $container = new Container();
