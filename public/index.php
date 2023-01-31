@@ -21,6 +21,7 @@ use Carbon\Carbon;
 use Slim\Flash\Messages;
 use GuzzleHttp\Client;
 use Guzzle\Http\Exception\ClientErrorResponseException;
+use DiDom\Document;
 
 session_start();
 
@@ -180,7 +181,7 @@ $app->get(
         }
 
         // Extract URL data from 'url_checks' table
-        $selectCheckUrl = $database->prepare('SELECT id, created_at, status_code FROM url_checks WHERE url_id=?');
+        $selectCheckUrl = $database->prepare('SELECT id, status_code, h1, title, description, created_at FROM url_checks WHERE url_id=?');
         $selectCheckUrl->execute([$id]);
         $checkUrl = $selectCheckUrl->fetchAll();
 
@@ -205,27 +206,39 @@ $app->post(
         $getUrl->execute([$url_id]);
         $url = $getUrl->fetchColumn();
 
-        // Throw exception for status code
-        $client = new Client;
+        // Throw exception for status code (Guzzle HTTP Client)
+        $client = new Client();
         try {
             $res = $client->request('GET', (string) $url);
-        }
-        // Exception when a client error is encountered (4xx codes)
-        catch (GuzzleHttp\Exception\ClientException $e) {
+        } catch (GuzzleHttp\Exception\ClientException $e) { // Exception when a client error is encountered (4xx codes)
             $res = $e->getResponse();
             $responseBodyAsString = $res->getBody()->getContents();
-        }
-        // Exception when a server error is encountered (5xx codes)
-        catch (GuzzleHttp\Exception\ServerException $e) {
+        } catch (GuzzleHttp\Exception\ServerException $e) { // Exception when a server error is encountered (5xx codes)
             $res = $e->getResponse();
             return $this->get('renderer')->render($res, 'components/500.phtml');
         }
-
-        // Get status code
+        // Get site status code
         $status_code = $res->getStatusCode();
+
+        // Find site tags (DiDOM)
+        $document = new Document((string) $url, true);
+
+        // Find tag id
+        $findh1 = $document->first('h1');
+        $h1 = $findh1 ? $findh1->text() : '';
+        // Find tag title
+        $findTitle = $document->first('title');
+        $title = $findTitle ? $findTitle->text() : '';
+        // Find tag description
+        if ($document->has('meta[name=description]')) {
+            $description = $document->first('meta[name=description]')->getAttribute('content');
+        } else {
+            $description = '';
+        }
+
         // Add checks data in database table 'url_checks'
-        $addUrlCheck = $database->prepare('INSERT INTO url_checks (url_id, created_at, status_code) VALUES (?, ?, ?)');
-        $addUrlCheck->execute([$url_id, $timestamp, $status_code]);
+        $addUrlCheck = $database->prepare('INSERT INTO url_checks (url_id, status_code, h1, title, description, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+        $addUrlCheck->execute([$url_id, $status_code, $h1, $title, $description, $timestamp]);
 
         // Get 'id' and redirect with flash message
         $getUrl = $database->prepare('SELECT name FROM urls WHERE id=?');
