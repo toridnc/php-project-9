@@ -56,7 +56,7 @@ class Connection
 
         $conStr = "pgsql:host=$host;port=$port;dbname=$dbname";
         $opt = array(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $pdo = new \PDO($conStr, $user, $password, $opt);
+        $pdo = new \PDO($conStr, $username, $password, $opt);
 
         return $pdo;
     }
