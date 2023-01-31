@@ -50,12 +50,12 @@
             <!--?php foreach ($checks as $check): ?-->
             <?php foreach ($checks as $check) : ?>
             <tr>
-                <th><?= $check['id'] ?></th>
-                <th><?= $check['status_code'] ?></th>
-                <th><?= $check['h1'] ?></th>
-                <th><?= $check['title'] ?></th>
-                <th><?= $check['description'] ?></th>
-                <th><?= $check['created_at'] ?></th>
+                <td><?= $check['id'] ?></td>
+                <td><?= $check['status_code'] ?></td>
+                <td class="text-break"><?= $check['h1'] ?></td>
+                <td class="text-break"><?= $check['title'] ?></td>
+                <td class="text-break"><?= $check['description'] ?></td>
+                <td><?= $check['created_at'] ?></td>
             </tr>
             <?php endforeach ?>
         </tbody>
