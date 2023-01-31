@@ -181,7 +181,8 @@ $app->get(
         }
 
         // Extract URL data from 'url_checks' table
-        $selectCheckUrl = $database->prepare('SELECT id, status_code, h1, title, description, created_at FROM url_checks WHERE url_id=?');
+        $selectCheckUrl = $database->prepare('SELECT id, status_code, h1, title, description, created_at
+        FROM url_checks WHERE url_id=?');
         $selectCheckUrl->execute([$id]);
         $checkUrl = $selectCheckUrl->fetchAll();
 
@@ -237,7 +238,9 @@ $app->post(
         }
 
         // Add checks data in database table 'url_checks'
-        $addUrlCheck = $database->prepare('INSERT INTO url_checks (url_id, status_code, h1, title, description, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+        $addUrlCheck = $database->prepare('INSERT INTO
+        url_checks (url_id, status_code, h1, title, description, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)');
         $addUrlCheck->execute([$url_id, $status_code, $h1, $title, $description, $timestamp]);
 
         // Get 'id' and redirect with flash message

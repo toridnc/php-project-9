@@ -43,16 +43,16 @@ class Connection
     public function connect()
     {
         // Read settings in the ini configuration file
-        $params = parse_ini_file(__DIR__ . '/../database.ini');
-        if ($params === false) {
+        $databaseUrl = parse_url($_ENV['DATABASE_URL']);
+        if ($databaseUrl === false) {
             throw new \Exception("Error reading database configuration file");
         }
         // Connection to the PostgreSQL database
-        $host = $params['host'];
-        $port = $params['port'];
-        $dbname = $params['dbname'];
-        $user = $params['user'];
-        $password = $params['password'];
+        $host = $databaseUrl['host'];
+        $port = $databaseUrl['port'];
+        $dbname = ltrim($databaseUrl['path'], '/');
+        $username = $databaseUrl['user'];
+        $password = $databaseUrl['pass'];
 
         $conStr = "pgsql:host=$host;port=$port;dbname=$dbname";
         $opt = array(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
