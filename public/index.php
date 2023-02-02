@@ -73,7 +73,6 @@ $app->get(
         $messages = $this->get('flash')->getMessages();
         $params = [
             'itemMenu' => $itemMenu,
-            'flash' => $messages,
             'url' => ''
         ];
         return $this->get('renderer')->render($response, 'index.phtml', $params);
@@ -177,6 +176,15 @@ $app->get(
 
         // Add a message that the URL was added successfully
         $messages = $this->get('flash')->getMessages();
+        // Alert color
+        $alert = '';
+        if (array_key_exists('success', $messages)) {
+            $alert = 'success'; // green
+        } elseif (array_key_exists('warning', $messages)) {
+            $alert = 'warning'; // yellow
+        } elseif (array_key_exists('danger', $messages)) {
+            $alert = 'danger'; // red
+        }
 
         // Extract URL data from 'urls' table
         $selectDataUrl = $database->prepare('SELECT * FROM urls WHERE id=?');
@@ -196,6 +204,7 @@ $app->get(
 
         $params = [
             'flash' => $messages,
+            'alert' => $alert,
             'url' => $dataUrl,
             'checks' => $checkUrl
         ];
@@ -222,17 +231,31 @@ $app->post(
         } catch (GuzzleHttp\Exception\ClientException $e) { // Exception when a client error is encountered (4xx codes)
             $res = $e->getResponse();
             $responseBodyAsString = $res->getBody()->getContents();
-        } catch (GuzzleHttp\Exception\ServerException $e) { // Exception when a server error is encountered (5xx codes)
+        } catch (GuzzleHttp\Exception\ServerException $e) { // Exception when a server error is encountered
             $res = $e->getResponse();
             return $this->get('renderer')->render($res, 'components/500.phtml');
+        } catch (\Exception $e) {
+            $this->get('flash')->addMessage('danger', 'Произошла ошибка при проверке, не удалось подключиться. Проверьте правильность написания сайта');
+            return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
         }
         // Get site status code
         $status_code = $res->getStatusCode();
 
         // Find site tags (DiDOM)
-        $document = new Document((string) $url, true);
+        try {
+            $document = new Document((string) $url, true);
+        } catch (RuntimeException $e) {
+            $h1 = $url;
+            $title = 'Just a moment...';
+            $addUrlCheck = $database->prepare('INSERT INTO
+            url_checks (url_id, status_code, h1, title, created_at)
+            VALUES (?, ?, ?, ?, ?)');
+            $addUrlCheck->execute([$url_id, $status_code, $h1, $title, $timestamp]);
+            $this->get('flash')->addMessage('warning', 'Проверка была выполнена успешно, но сервер ответил c ошибкой');
+            return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
+        }
 
-        // Find tag id
+        // Find tag h1
         $findh1 = $document->first('h1');
         $h1 = $findh1 ? $findh1->text() : '';
         // Find tag title
@@ -240,7 +263,7 @@ $app->post(
         $title = $findTitle ? $findTitle->text() : '';
         // Find tag description
         if ($document->has('meta[name=description]')) {
-            $description = $document->first('meta[name=description]')->getAttribute('content');
+            $description = $document->first('meta[name=description]')->attr('content');
         } else {
             $description = '';
         }
@@ -257,11 +280,11 @@ $app->post(
         $url = $getUrl->fetchColumn();
         if ($status_code === 200) {
             $this->get('flash')->addMessage('success', 'Страница успешно проверена');
-        } else {
-            $this->get('flash')->addMessage('warning', 'Проверка была выполнена успешно, но сервер ответил c ошибкой');
         }
         return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
     }
 )->setName('check');
+
+// ВЫВЕСТИ 403 ОТВЕТ
 
 $app->run();
