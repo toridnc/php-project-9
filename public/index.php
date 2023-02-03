@@ -231,11 +231,11 @@ $app->post(
         } catch (GuzzleHttp\Exception\ClientException $e) { // Exception when a client error is encountered (4xx codes)
             $res = $e->getResponse();
             $responseBodyAsString = $res->getBody()->getContents();
-        } catch (GuzzleHttp\Exception\ServerException $e) { // Exception when a server error is encountered
+        } catch (GuzzleHttp\Exception\ServerException $e) { // Exception when a server error is encountered (5xx codes)
             $res = $e->getResponse();
             return $this->get('renderer')->render($res, 'components/500.phtml');
         } catch (\Exception $e) {
-            $this->get('flash')->addMessage('danger', 'Произошла ошибка при проверке, не удалось подключиться. Проверьте правильность написания сайта');
+            $this->get('flash')->addMessage('danger', 'Произошла ошибка при проверке, не удалось подключиться');
             return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
         }
         // Get site status code
@@ -244,7 +244,7 @@ $app->post(
         // Find site tags (DiDOM)
         try {
             $document = new Document((string) $url, true);
-        } catch (RuntimeException $e) {
+        } catch (Exception $e) { // 4xx codes
             $h1 = $url;
             $title = 'Just a moment...';
             $addUrlCheck = $database->prepare('INSERT INTO
@@ -284,7 +284,5 @@ $app->post(
         return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
     }
 )->setName('check');
-
-// ВЫВЕСТИ 403 ОТВЕТ
 
 $app->run();
