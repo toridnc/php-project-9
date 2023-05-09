@@ -32,11 +32,11 @@ if ($databaseUrl === false) {
     throw new \Exception("Error reading database data");
 }
 // Connection to the PostgreSQL database
-$host = $databaseUrl['host'];
-$port = $databaseUrl['port'];
-$dbname = ltrim($databaseUrl['path'], '/');
-$username = $databaseUrl['user'];
-$password = $databaseUrl['pass'];
+$host = isset($databaseUrl['host']) ? $databaseUrl['host'] : '';
+$port = isset($databaseUrl['port']) ? $databaseUrl['port'] : '';
+$dbname = isset($databaseUrl['path']) ? ltrim($databaseUrl['path'], '/') : '';
+$username = isset($databaseUrl['user']) ? $databaseUrl['user'] : '';
+$password = isset($databaseUrl['pass']) ? $databaseUrl['pass'] : '';
 
 $conStr = "pgsql:host=$host;port=$port;dbname=$dbname";
 $opt = array(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
@@ -91,8 +91,8 @@ $app->post(
         // Validation
         // If there are errors, set the response code to 422 and render the form with errors.
         $v = new Valitron\Validator($url);
-        $v->rule('required', 'name'); // Field is not empty
-        if (!$v->validate()) {
+        $v->rule('required', 'name')->message('URL не должен быть пустым'); // Field is not empty
+        if ($v->validate() === false) {
             $errors = $v->errors();
             $message = 'URL не должен быть пустым';
             $params = [
@@ -101,9 +101,9 @@ $app->post(
             ];
             return $this->get('renderer')->render($response->withStatus(422), 'index.phtml', $params);
         }
-        $v->rule('url', 'name'); // Correct URL address
-        $v->rule('lengthMax', 'name', 255); // Length not more than 255 characters
-        if (!$v->validate()) {
+        $v->rule('url', 'name')->message('Некорректный URL'); // Correct URL address
+        $v->rule('lengthMax', 'name', 255)->message('Некорректный URL'); // Length not more than 255 characters
+        if ($v->validate() === false) {
             $errors = $v->errors();
             $message = 'Некорректный URL';
             $params = [
@@ -117,9 +117,9 @@ $app->post(
         $exists = $database->prepare('SELECT id FROM urls WHERE name=?');
         $exists->execute([$name]);
         $count = $exists->rowCount();
-        // If the URL is already exists, set the response code to 422 and render the form with errors
+        // If the URL is already exists, set the response code to 302 and render the form with errors
         if ($count > 0) {
-            $id = $exists->fetchColumn();
+            $id = (string) $exists->fetchColumn();
             $this->get('flash')->addMessage('success', 'Страница уже существует');
             return $response->withRedirect($router->urlFor('url', ['id' => $id]), 302);
         }
@@ -130,9 +130,9 @@ $app->post(
         // Get 'id' and redirect with flash message
         $getId = $database->prepare('SELECT id FROM urls WHERE name=?');
         $getId->execute([$name]);
-        $id = $getId->fetchColumn();
+        $id = (string) $getId->fetchColumn();
         $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
-        return $response->withRedirect($router->urlFor('url', ['id' => $id]), 302);
+        return $response->withRedirect($router->urlFor('url', ['id' => $id]), 201);
     }
 )->setName('postNewUrl');
 
@@ -155,8 +155,8 @@ $app->get(
                 ORDER BY created_at DESC LIMIT 1');
             $getUrlCheck->execute([$id]);
             $checks = $getUrlCheck->fetch();
-            $status_code = $checks['status_code'];
-            $last_checks = $checks['created_at'];
+            $status_code = empty($checks['status_code']) ? '' : $checks['status_code'];
+            $last_checks = empty($checks['created_at']) ? '' : $checks['created_at'];
             $urls[] = compact('id', 'status_code', 'name', 'last_checks');
         }
 
@@ -238,6 +238,7 @@ $app->post(
             $this->get('flash')->addMessage('danger', 'Произошла ошибка при проверке, не удалось подключиться');
             return $response->withRedirect($router->urlFor('url', ['id' => $url_id]), 302);
         }
+
         // Get site status code
         $status_code = $res->getStatusCode();
 
@@ -257,16 +258,14 @@ $app->post(
 
         // Find tag h1
         $findh1 = $document->first('h1');
-        $h1 = $findh1 ? $findh1->text() : '';
+        $h1 = isset($findh1) ? $findh1->text() : '';
         // Find tag title
         $findTitle = $document->first('title');
-        $title = $findTitle ? $findTitle->text() : '';
+        $title = isset($findTitle) ? $findTitle->text() : '';
         // Find tag description
-        if ($document->has('meta[name=description]')) {
-            $description = $document->first('meta[name=description]')->attr('content');
-        } else {
-            $description = '';
-        }
+        $elementDescription = $document->first('meta[name=description]');
+        $attrContent = isset($elementDescription) ? $elementDescription->attr('content') : '';
+        $description = $attrContent;
 
         // Add checks data in database table 'url_checks'
         $addUrlCheck = $database->prepare('INSERT INTO
