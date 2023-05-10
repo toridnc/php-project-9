@@ -14,13 +14,13 @@
                         <input type="text" name="url[name]" value="" class="form-control form-control-lg <?= (isset($errors)) ? 'is-invalid' : '';?>" data-ddg-inputtype="unknown" data-twofas-input-listener="true" placeholder="https://www.example.com">
                             <!--?php if (isset($errors) > 0) : ?-->
                             <?php if (isset($errors) > 0) : ?>
-                                <div class="invalid-feedback"> <?= $message ?> </div>
+                                <div class="invalid-feedback"><?= $message ?></div>
                             <?php endif ?>
                         </div>
                     <div class="col-2">
                         <input type="submit" class="btn btn-primary btn-lg ms-3 px-5 text-uppercase mx-3" value="Проверить">
                     </div>
-                </form>
+                </form> 
             </div>
         </div>
     </div>
