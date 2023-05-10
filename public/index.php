@@ -132,7 +132,7 @@ $app->post(
         $getId->execute([$name]);
         $id = (string) $getId->fetchColumn();
         $this->get('flash')->addMessage('success', 'Страница успешно добавлена');
-        return $response->withRedirect($router->urlFor('url', ['id' => $id]), 201);
+        return $response->withRedirect($router->urlFor('url', ['id' => $id]), 302);
     }
 )->setName('postNewUrl');
 
