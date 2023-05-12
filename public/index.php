@@ -92,7 +92,7 @@ $app->post(
         // If there are errors, set the response code to 422 and render the form with errors.
         $v = new Valitron\Validator($url);
         $v->rule('required', 'name')->message('URL не должен быть пустым'); // Field is not empty
-        if ($v->validate() === false) {
+        if ($v->validate() == false) {
             $errors = $v->errors();
             $message = 'URL не должен быть пустым';
             $params = [
@@ -103,7 +103,7 @@ $app->post(
         }
         $v->rule('url', 'name')->message('Некорректный URL'); // Correct URL address
         $v->rule('lengthMax', 'name', 255)->message('Некорректный URL'); // Length not more than 255 characters
-        if ($v->validate() === false) {
+        if ($v->validate() == false) {
             $errors = $v->errors();
             $message = 'Некорректный URL';
             $params = [
@@ -258,18 +258,10 @@ $app->post(
 
         // Find tag h1
         $findh1 = $document->first('h1');
-        if ($findh1) {
-            $h1 = $findh1->text();
-        } else {
-            $h1 = '';
-        }
+        $h1 = $findh1 ? $findh1->html() : '';
         // Find tag title
         $findTitle = $document->first('title');
-        if ($findTitle) {
-            $title = $findTitle->text();
-        } else {
-            $title = '';
-        }
+        $title = $findTitle ? $findTitle->html() : '';
         // Find tag description
         $elementDescription = $document->first('meta[name=description]');
         $attrContent = isset($elementDescription) ? $elementDescription->getAttribute('content') : '';
