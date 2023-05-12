@@ -258,13 +258,21 @@ $app->post(
 
         // Find tag h1
         $findh1 = $document->first('h1');
-        $h1 = isset($findh1) ? $findh1->text() : '';
+        if ($findh1) {
+            $h1 = $findh1->text();
+        } else {
+            $h1 = '';
+        }
         // Find tag title
         $findTitle = $document->first('title');
-        $title = isset($findTitle) ? $findTitle->text() : '';
+        if ($findTitle) {
+            $title = $findTitle->text();
+        } else {
+            $title = '';
+        }
         // Find tag description
         $elementDescription = $document->first('meta[name=description]');
-        $attrContent = isset($elementDescription) ? $elementDescription->attr('content') : '';
+        $attrContent = isset($elementDescription) ? $elementDescription->getAttribute('content') : '';
         $description = $attrContent;
 
         // Add checks data in database table 'url_checks'
