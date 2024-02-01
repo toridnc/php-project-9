@@ -9,7 +9,7 @@
  * @package  Page_Analyzer
  * @author   toridnc <riadev@inbox.ru>
  * @license  MIT https://mit-license.org/
- * @link     https://github.com/toridnc/php-project-lvl3
+ * @link     https://github.com/toridnc/php-project-9
  */
 
 require __DIR__ . '/../vendor/autoload.php';
